@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -24,32 +25,28 @@ public class ClimaController {
     public ResponseEntity<Map<String, Object>> getClimaActual(@RequestParam(required = false) String ciudad) {
         Map<String, Object> response = new HashMap<>();
         try {
-            // Validación de parámetro 'ciudad'
             if (ciudad == null || ciudad.trim().isEmpty()) {
                 response.put("error", "Por favor, especifique una ciudad válida.");
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
             }
 
-            // Consulta al servicio
             Map<String, Object> climaData = climaService.getClimaActual(ciudad);
             Map<String, Object> clima = (Map<String, Object>) climaData.get("clima");
 
-            // Añadir más datos disponibles
-            clima.put("viento_mph", climaData.get("wind_mph"));
-            clima.put("direccion_viento", climaData.get("wind_dir"));
-            clima.put("presion_mb", climaData.get("pressure_mb"));
-            clima.put("precipitacion_mm", climaData.get("precip_mm"));
+            if (clima == null || clima.isEmpty()) {
+                response.put("error", "No se encontraron datos climáticos para la ciudad especificada. Verifique el nombre.");
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+            }
 
             response.put("clima", clima);
             response.put("mensaje", "Condiciones climáticas actuales obtenidas correctamente");
             return ResponseEntity.ok(response);
         } catch (RuntimeException e) {
-            // Manejo de errores de la API externa (e.g., ciudad no encontrada)
             if (e.getMessage().contains("400 Bad Request") || e.getMessage().contains("No matching location found")) {
                 response.put("error", "No se encontró la ciudad especificada. Verifique el nombre e intente de nuevo.");
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
             }
-            response.put("error", "Error al consultar las condiciones climáticas: " + e.getMessage());
+            response.put("error", "Error al consultar las condiciones climáticas. Intente de nuevo más tarde.");
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
         } catch (Exception e) {
             response.put("error", "Ocurrió un error interno en el servidor. Intente de nuevo más tarde.");
@@ -58,19 +55,34 @@ public class ClimaController {
     }
 
     @GetMapping("/clima/horario")
-    public ResponseEntity<Map<String, Object>> getPronosticoHorario(@RequestParam String ciudad) {
+    public ResponseEntity<Map<String, Object>> getPronosticoHorario(@RequestParam(required = false) String ciudad) {
         Map<String, Object> response = new HashMap<>();
         try {
-            if (ciudad == null || ciudad.isBlank()) {
-                response.put("error", "El parámetro 'ciudad' es obligatorio");
+            if (ciudad == null || ciudad.trim().isEmpty()) {
+                response.put("error", "Por favor, especifique una ciudad válida.");
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
             }
-            return ResponseEntity.ok(climaService.getPronosticoHorario(ciudad));
+
+            Map<String, Object> pronosticoData = climaService.getPronosticoHorario(ciudad);
+            List<Map<String, Object>> pronostico = (List<Map<String, Object>>) pronosticoData.get("pronostico_horario");
+
+            if (pronostico == null || pronostico.isEmpty()) {
+                response.put("error", "No se encontró pronóstico para la ciudad especificada. Verifique el nombre.");
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+            }
+
+            response.put("pronostico_horario", pronostico);
+            response.put("mensaje", "Pronóstico horario obtenido correctamente");
+            return ResponseEntity.ok(response);
         } catch (RuntimeException e) {
-            response.put("error", e.getMessage());
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+            if (e.getMessage().contains("400 Bad Request") || e.getMessage().contains("No matching location found")) {
+                response.put("error", "No se encontró la ciudad especificada. Verifique el nombre e intente de nuevo.");
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+            }
+            response.put("error", "Error al consultar el pronóstico horario. Intente de nuevo más tarde.");
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
         } catch (Exception e) {
-            response.put("error", "Error al consultar pronóstico horario: " + e.getMessage());
+            response.put("error", "Ocurrió un error interno en el servidor. Intente de nuevo más tarde.");
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
         }
     }
@@ -107,7 +119,7 @@ public class ClimaController {
         try {
             return ResponseEntity.status(HttpStatus.CREATED).body(climaService.registrarMonitoreo(input));
         } catch (Exception e) {
-            response.put("error", "Error al registrar el monitoreo: " + e.getMessage());
+            response.put("error", "Error al registrar el monitoreo. Intente de nuevo más tarde.");
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
         }
     }
