@@ -40,6 +40,10 @@ public class ClimaService {
         clima.put("condicion_clima", condition.get("text"));
         clima.put("sensacion_termica", current.get("feelslike_c"));
         clima.put("humedad", current.get("humidity"));
+        clima.put("viento_mph", current.get("wind_mph"));
+        clima.put("direccion_viento", current.get("wind_dir"));
+        clima.put("presion_mb", current.get("pressure_mb"));
+        clima.put("precipitacion_mm", current.get("precip_mm"));
 
         Map<String, Object> response = new HashMap<>();
         response.put("clima", clima);
